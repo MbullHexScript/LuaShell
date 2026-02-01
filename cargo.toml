@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 mlua = { version = "0.9", features = ["lua54", "vendored"] }
 rustyline = "14.0"
+dirs = "5.0"

@@ -1,7 +1,8 @@
--- commands/exit.lua - Exit the shell
+-- commands/exit.lua - Exit the shell with STYLE! 👋
 
 dispatcher.register("exit", function(args)
-    term.println("Goodbye!")
+    local colors = shell.colors
+    term.println(colors.bright_cyan .. "Goodbye! " .. colors.reset .. "👋")
     _LuaShell.running = false
 end)
 

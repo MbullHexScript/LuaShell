@@ -1,4 +1,4 @@
--- dispatcher.lua - Command dispatching and execution
+-- dispatcher.lua - Command dispatching and execution with BETTER ERRORS! ⚠️
 
 dispatcher = {}
 
@@ -24,11 +24,15 @@ function dispatcher.execute(parsed)
     local cmd = parsed.cmd
     local args = parsed.args
 
+    -- Import colors
+    local colors = shell.colors
+
     -- Trigger command hooks
     for _, hook in ipairs(_LuaShell.hooks.command) do
         local ok, result = pcall(hook, cmd, args)
         if not ok then
-            term.println("Command hook error: " .. tostring(result))
+            term.println(colors.yellow .. "Warning: " .. colors.reset ..
+                        "Command hook error: " .. tostring(result))
         end
     end
 
@@ -42,13 +46,24 @@ function dispatcher.execute(parsed)
         -- Execute Lua command
         local ok, err = pcall(handler, args)
         if not ok then
-            term.println("Error: " .. tostring(err))
+            term.println(colors.red .. "Error: " .. colors.reset .. tostring(err))
             return false
         end
         return true
     else
         -- External command - delegate to host
         local exit_code = process.exec(resolved_cmd, args)
+
+        if exit_code == 127 then
+            -- Command not found
+            term.println(colors.red .. "Error: " .. colors.reset ..
+                        "command not found: " .. colors.yellow .. resolved_cmd .. colors.reset)
+        elseif exit_code ~= 0 then
+            -- Command failed
+            term.println(colors.yellow .. "Warning: " .. colors.reset ..
+                        "command exited with code " .. exit_code)
+        end
+
         return exit_code == 0
     end
 end

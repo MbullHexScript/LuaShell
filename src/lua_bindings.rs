@@ -35,12 +35,32 @@ fn register_term_module(lua: &Lua) -> LuaResult<()> {
     term.set("println", println_fn)?;
 
     // term.read_line() -> string
+    // FIXED: Convert \001 \002 markers to rustyline format
     let read_line_fn = lua.create_function(|_, prompt: String| {
         let mut rl = DefaultEditor::new()
             .map_err(|e| LuaError::RuntimeError(e.to_string()))?;
 
-        match rl.readline(&prompt) {
-            Ok(line) => Ok(line),
+        // Load history from ~/.luashell_history
+        let history_file = dirs::home_dir()
+            .unwrap_or_else(|| std::path::PathBuf::from("."))
+            .join(".luashell_history");
+
+        let _ = rl.load_history(&history_file);
+
+        // Convert Lua's \001 \002 markers to rustyline's \x01 \x02
+        let fixed_prompt = prompt
+            .replace("\x01", "\x01")  // Start invisible
+            .replace("\x02", "\x02"); // End invisible
+
+        match rl.readline(&fixed_prompt) {
+            Ok(line) => {
+                // Add to history and save
+                if !line.trim().is_empty() {
+                    let _ = rl.add_history_entry(&line);
+                    let _ = rl.save_history(&history_file);
+                }
+                Ok(line)
+            }
             Err(rustyline::error::ReadlineError::Interrupted) => Ok(String::new()),
             Err(rustyline::error::ReadlineError::Eof) => Ok("exit".to_string()),
             Err(e) => Err(LuaError::RuntimeError(e.to_string())),
@@ -92,6 +112,12 @@ fn register_fs_module(lua: &Lua) -> LuaResult<()> {
         Ok(std::path::Path::new(&path).exists())
     })?;
     fs_mod.set("exists", exists_fn)?;
+
+    // fs.is_dir(path) -> bool
+    let is_dir_fn = lua.create_function(|_, path: String| {
+        Ok(std::path::Path::new(&path).is_dir())
+    })?;
+    fs_mod.set("is_dir", is_dir_fn)?;
 
     // fs.list_dir(path) -> table
     let list_dir_fn = lua.create_function(|lua, path: String| {
