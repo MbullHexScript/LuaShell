@@ -6,7 +6,7 @@ package.path = package.path .. ";./lua/?.lua;./lua/core/?.lua;./lua/commands/?.l
 
 -- Global state
 _LuaShell = {
-    version = "0.1.0",
+    version = "0.2.0",
     running = true,
     commands = {},
     aliases = {},
@@ -28,6 +28,13 @@ require("commands.help")
 require("commands.exit")
 require("commands.cd")
 require("commands.pwd")
+
+-- ⭐ NEW COMMANDS (v0.2.0)
+require("commands.clear")
+require("commands.echo")
+require("commands.cat")
+require("commands.ls")
+require("commands.env")
 
 -- Try load config.lua if exists
 local ok, err = pcall(function()
