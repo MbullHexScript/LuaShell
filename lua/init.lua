@@ -1,4 +1,4 @@
--- init.lua - Bootstrap LuaShell Lua layer
+-- init.lua - Bootstrap LuaShell Lua layer with BETTER CONFIG SYSTEM
 -- Dieksekusi pertama kali oleh host
 
 -- Load path untuk modules
@@ -6,7 +6,7 @@ package.path = package.path .. ";./lua/?.lua;./lua/core/?.lua;./lua/commands/?.l
 
 -- Global state
 _LuaShell = {
-    version = "0.2.0",
+    version = "0.4.0",
     running = true,
     commands = {},
     aliases = {},
@@ -28,15 +28,41 @@ require("commands.help")
 require("commands.exit")
 require("commands.cd")
 require("commands.pwd")
-
--- ⭐ NEW COMMANDS (v0.2.0)
 require("commands.clear")
 require("commands.echo")
 require("commands.cat")
 require("commands.ls")
 require("commands.env")
+require("commands.source")  -- Script execution
+require("commands.config")  -- Config management
 
--- Try load config.lua if exists
+-- ============================================================
+-- MULTI-LEVEL CONFIG LOADING
+-- ============================================================
+
+local function load_config_file(path, name)
+    if fs.exists(path) then
+        local ok, err = pcall(function()
+            dofile(path)
+        end)
+        if ok then
+            -- term.println("Loaded: " .. name)
+        else
+            term.println("Warning: Error loading " .. name .. ": " .. tostring(err))
+        end
+        return true
+    end
+    return false
+end
+
+-- 1. Try load GLOBAL config (~/.luashellrc)
+local home = env.get("HOME") or env.get("USERPROFILE")
+if home then
+    local global_config = home .. "/.luashellrc"
+    load_config_file(global_config, "global config")
+end
+
+-- 2. Try load PROJECT config (lua/config.lua)
 local ok, err = pcall(function()
     require("config")
 end)
@@ -44,6 +70,13 @@ end)
 if not ok and not string.match(err, "module 'config' not found") then
     term.println("Warning: config.lua error: " .. tostring(err))
 end
+
+-- 3. Try load DIRECTORY config (./.luashellrc)
+load_config_file(".luashellrc", "directory config")
+
+-- ============================================================
+-- STARTUP HOOKS
+-- ============================================================
 
 -- Trigger startup hooks
 for _, hook in ipairs(_LuaShell.hooks.startup) do
